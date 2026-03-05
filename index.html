@@ -1006,6 +1006,12 @@
 
             // 戻る/更新で bfcache 復元された場合もOFFに戻す
             window.addEventListener("pageshow", () => {
+
+                const consent = document.getElementById("privacy-consent");
+                if (consent) {
+                  consent.addEventListener("change", () => consent.setCustomValidity(""));
+                }
+
                 const k = document.getElementById("keep-input");
                 if (k) k.checked = false;
 
@@ -1015,6 +1021,33 @@
 
             form.addEventListener("submit", async (e) => {
                 e.preventDefault();
+
+                // ================================
+                // 個人情報保護方針チェック（スマホでも必ず表示）
+                // ================================
+                const consent = document.getElementById("privacy-consent");
+                if (consent) {
+                  // いったんエラー文言を仕込む（未チェック時だけ）
+                  if (!consent.checked) {
+                    consent.setCustomValidity("チェックボックスにチェックを入れて下さい。");
+
+                    // スマホ含め、ブラウザのバリデーションUIを強制表示
+                    if (typeof form.reportValidity === "function") form.reportValidity();
+
+                    // 念のためフォーカス
+                    try { consent.focus(); } catch (_) {}
+
+                    // 送信処理は止める
+                    if (submitBtn) {
+                      submitBtn.disabled = false;
+                      submitBtn.classList.remove("opacity-70", "cursor-not-allowed");
+                    }
+                    return;
+                  } else {
+                    // チェック済みならエラー解除
+                    consent.setCustomValidity("");
+                  }
+                }
 
                 // 希望納期：送信時のみ過去日付チェック（入力制限なし）
                 const deliveryEl = form.querySelector('[name="希望納期"]');
