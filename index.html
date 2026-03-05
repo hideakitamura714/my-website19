@@ -64,7 +64,6 @@
                 <div class="container mx-auto px-6">
                     <div class="max-w-3xl">
                         <span class="inline-block bg-red-700 text-white text-xs font-bold px-3 py-1 mb-4">国内外ネットワークを活用した専門調達支援</span>
-                        <!-- ▼ここから差し替え（3階層構成） -->
                         <h2 class="text-4xl md:text-6xl font-bold mb-4 leading-tight italic text-shadow-lg">
                           半導体・電子部品のスポット調達専門商社
                         </h2>
@@ -76,7 +75,6 @@
                         <p class="text-base md:text-lg mb-8 opacity-90 leading-loose font-medium">
                           半導体・電子部品専門のBtoB商社として、独自のグローバルネットワークで製造ラインを支えます。
                         </p>
-                        <!-- ▲ここまで差し替え -->
 
                         <div class="flex flex-wrap gap-4">
                             <button onclick="showPage('rfq')" class="bg-red-700 hover:bg-red-800 text-white px-10 py-4 font-bold transition flex items-center shadow-lg">
@@ -567,6 +565,11 @@
                                         </span>
                                     </label>
 
+                                    <!-- ★追加：カスタムエラーメッセージ（スマホ対応） -->
+                                    <p id="privacy-error" class="hidden text-red-700 text-sm font-bold mt-2">
+                                        チェックボックスにチェックを入れて下さい。
+                                    </p>
+
                                     <p class="text-xs text-slate-500 mt-3">
                                         ※送信後、自動受付メールが届きます。届かない場合は迷惑メールフォルダをご確認ください。
                                     </p>
@@ -839,7 +842,6 @@
         </div>
     </footer>
 
-    <!-- ★ここだけ差し替え済み（送信形式を x-www-form-urlencoded に変更） -->
     <script>
         // ================================
         // SPAページ切替 + ブラウザ戻る/進む対応
@@ -861,13 +863,12 @@
                 if (location.hash !== newHash) {
                     history.pushState({ pageId }, "", newHash);
                 } else {
-                    // 同じhashでも state を揃えたい場合は replaceState
                     history.replaceState({ pageId }, "", newHash);
                 }
             }
         }
 
-        // a href="#" onclick="showPage(...)" のデフォルト遷移を一括で止める（HTMLを極力変更しない）
+        // a href="#" onclick="showPage(...)" のデフォルト遷移を一括で止める
         document.addEventListener("click", (e) => {
             const a = e.target.closest("a");
             if (!a) return;
@@ -886,12 +887,11 @@
             showPage(pageId, { push: false });
         });
 
-        // 初回表示：hash があればそこを表示（例: /#privacy）
+        // 初回表示：hash があればそこを表示
         document.addEventListener("DOMContentLoaded", () => {
             const hash = (location.hash || "").replace("#", "");
             if (hash) showPage(hash, { push: false });
             else {
-                // state を揃える（任意）
                 history.replaceState({ pageId: "top" }, "", "#top");
             }
         });
@@ -908,11 +908,7 @@
             const data = {};
             form.querySelectorAll("input, textarea").forEach(el => {
                 if (!el.name) return;
-
-                // ▼▼▼ 同意チェックは保存しない ▼▼▼
                 if (el.id === "privacy-consent") return;
-                // ▲▲▲ ここまで ▲▲▲
-
                 if (
                     el.type === "checkbox" ||
                     el.type === "radio" ||
@@ -943,8 +939,7 @@
             if (!data || typeof data !== "object") return;
 
             Object.keys(data).forEach(name => {
-                if (name === "privacy_consent") return; // 念のため
-
+                if (name === "privacy_consent") return;
                 const el = form.querySelector(`[name="${name}"]`);
                 if (el) el.value = data[name];
             });
@@ -954,7 +949,7 @@
             try { localStorage.removeItem(RFQ_STORAGE_KEY); } catch (_) {}
         }
 
-        // 成功画面からフォームへ戻す（チェック状態に応じて復元/クリア）
+        // 成功画面からフォームへ戻す
         function backToForm() {
             const form = document.getElementById("rfq-form");
             const successMsg = document.getElementById("success-msg");
@@ -962,22 +957,23 @@
             const submitBtn = document.getElementById("submit-btn");
             const keep = document.getElementById("keep-input");
 
-            // 画面切替
             if (successMsg) successMsg.classList.add("hidden");
             if (form) form.classList.remove("hidden");
 
-            // UIを送信前へ戻す
             if (errorMsg) errorMsg.classList.add("hidden");
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove("opacity-70", "cursor-not-allowed");
             }
 
-            // 同意チェックは常にOFFへ戻す（保持しない／法的同意の原則）
+            // 同意チェックは常にOFFへ戻す
             const consent = document.getElementById("privacy-consent");
             if (consent) consent.checked = false;
 
-            // 復元 or クリア
+            // ★追加：エラーメッセージも非表示に戻す
+            const privacyError = document.getElementById("privacy-error");
+            if (privacyError) privacyError.classList.add("hidden");
+
             if (keep && keep.checked) {
                 restoreRfqFormData();
             } else {
@@ -985,12 +981,11 @@
                 clearRfqFormData();
             }
 
-            // 念のためフォーム先頭へ
             try { form?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (_) {}
         }
 
         // ================================
-        // RFQフォーム送信（Workers）
+        // RFQフォーム送信
         // ================================
         document.addEventListener("DOMContentLoaded", () => {
             const form = document.getElementById("rfq-form");
@@ -1000,16 +995,22 @@
             const errorMsg = document.getElementById("error-msg");
             const successMsg = document.getElementById("success-msg");
 
-            // チェックボックスは必ずデフォルトOFF（ブラウザ復元対策）
             const keep = document.getElementById("keep-input");
             if (keep) keep.checked = false;
 
             // 戻る/更新で bfcache 復元された場合もOFFに戻す
             window.addEventListener("pageshow", () => {
 
+                // ★変更：チェックON時にカスタムエラーメッセージを自動非表示にする
                 const consent = document.getElementById("privacy-consent");
                 if (consent) {
-                  consent.addEventListener("change", () => consent.setCustomValidity(""));
+                    consent.addEventListener("change", () => {
+                        consent.setCustomValidity("");
+                        const privacyError = document.getElementById("privacy-error");
+                        if (consent.checked && privacyError) {
+                            privacyError.classList.add("hidden");
+                        }
+                    });
                 }
 
                 const k = document.getElementById("keep-input");
@@ -1023,33 +1024,34 @@
                 e.preventDefault();
 
                 // ================================
-                // 個人情報保護方針チェック（スマホでも必ず表示）
+                // ★変更：個人情報保護方針チェック（スマホでも必ず表示）
                 // ================================
                 const consent = document.getElementById("privacy-consent");
+                const privacyError = document.getElementById("privacy-error");
+
                 if (consent) {
-                  // いったんエラー文言を仕込む（未チェック時だけ）
-                  if (!consent.checked) {
-                    consent.setCustomValidity("チェックボックスにチェックを入れて下さい。");
+                    if (!consent.checked) {
+                        // カスタムエラーメッセージをDOM上に表示
+                        if (privacyError) privacyError.classList.remove("hidden");
 
-                    // スマホ含め、ブラウザのバリデーションUIを強制表示
-                    if (typeof form.reportValidity === "function") form.reportValidity();
+                        // チェックボックスの位置までスクロール
+                        try {
+                            consent.scrollIntoView({ behavior: "smooth", block: "center" });
+                        } catch (_) {}
 
-                    // 念のためフォーカス
-                    try { consent.focus(); } catch (_) {}
-
-                    // 送信処理は止める
-                    if (submitBtn) {
-                      submitBtn.disabled = false;
-                      submitBtn.classList.remove("opacity-70", "cursor-not-allowed");
+                        // 送信ボタンを復帰
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.classList.remove("opacity-70", "cursor-not-allowed");
+                        }
+                        return;
+                    } else {
+                        // チェック済みならエラーを非表示
+                        if (privacyError) privacyError.classList.add("hidden");
                     }
-                    return;
-                  } else {
-                    // チェック済みならエラー解除
-                    consent.setCustomValidity("");
-                  }
                 }
 
-                // 希望納期：送信時のみ過去日付チェック（入力制限なし）
+                // 希望納期：送信時のみ過去日付チェック
                 const deliveryEl = form.querySelector('[name="希望納期"]');
                 if (deliveryEl) {
                     const v = (deliveryEl.value || "").trim();
@@ -1063,7 +1065,6 @@
                         today.setHours(0, 0, 0, 0);
                         selected.setHours(0, 0, 0, 0);
 
-                        // 無効日付（2/30等）対策
                         if (
                             selected.getFullYear() !== y ||
                             selected.getMonth() !== mo - 1 ||
@@ -1078,7 +1079,6 @@
                             return;
                         }
 
-                        // 過去日付なら停止
                         if (selected < today) {
                             alert("希望納期をご確認下さい");
                             if (deliveryEl.focus) deliveryEl.focus();
@@ -1101,7 +1101,6 @@
                 try {
                     const fd = new FormData(form);
     
-                    // FormData -> JSON
                     const payload = {};
                     fd.forEach((v, k) => { payload[k] = String(v); });
 
@@ -1114,7 +1113,6 @@
                     if (res.ok) {
                         saveRfqFormData();
     
-                        // 成功画面を出す直前に必ずデフォルトOFF
                         const k = document.getElementById("keep-input");
                         if (k) k.checked = false;
 
