@@ -1013,17 +1013,21 @@
                 if (c) c.checked = false;
             });
 
-            form.addEventListener("submit", async (e) => {
-                e.preventDefault();
-
-                // ========== ▼ 追加：個人情報保護方針の同意チェック ▼ ==========
+            // ── ▼ 送信ボタンclickで事前チェック（iOS Safari対策） ── 
+            submitBtn.addEventListener("click", (e) => {
                 const consent = document.getElementById("privacy-consent");
                 if (consent && !consent.checked) {
+                    e.preventDefault();          // フォーム送信を止める
+                    e.stopImmediatePropagation(); // submit イベントも発火させない
                     alert("チェックボックスにチェックを入れて下さい。");
-                    consent.focus();
+                    try { consent.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) {}
                     return;
                 }
-                // ========== ▲ 追加ここまで ▲ ==========
+                // チェック済みなら何もしない → 通常の submit イベントへ進む
+            });
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
 
 
                 // 希望納期：送信時のみ過去日付チェック（入力制限なし）
